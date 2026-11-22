@@ -20,3 +20,10 @@ ledgerflow:
   holds:
     expiry:
       interval: PT30S
+  outbox:
+    poll-interval: PT2S
+    max-attempts: 8
+    base-backoff: PT5S
+    max-backoff: PT30M
+    # webhook-url: https://example.com/hooks/ledger
+    # webhook-secret: change-me-to-a-long-random-secret
