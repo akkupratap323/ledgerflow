@@ -102,8 +102,8 @@ public class LedgerService {
     private Map<String, Account> lockAccounts(List<PostingLine> lines) {
         Map<UUID, String> idToCode = new HashMap<>();
         for (String code : new LinkedHashSet<>(lines.stream().map(PostingLine::accountCode).toList())) {
-            Account account = accounts.findByCode(code).orElseThrow(() -> new NotFoundException("Account", code));
-            idToCode.put(account.getId(), code);
+            UUID id = accounts.findIdByCode(code).orElseThrow(() -> new NotFoundException("Account", code));
+            idToCode.put(id, code);
         }
         Map<String, Account> locked = new HashMap<>();
         idToCode.keySet().stream().sorted(Comparator.naturalOrder()).forEach(id ->
