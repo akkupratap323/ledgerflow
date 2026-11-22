@@ -112,6 +112,15 @@ class IdempotencyTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    @Test
+    void overlongIdempotencyKeyIs400() throws Exception {
+        mvc.perform(post("/api/v1/entries").header("Idempotency-Key", "k".repeat(101))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JournalControllerTest.entry(cash, wallet, 1, 1)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_failed"));
+    }
+
     private static PostResult await(Future<PostResult> f) {
         try {
             return f.get();

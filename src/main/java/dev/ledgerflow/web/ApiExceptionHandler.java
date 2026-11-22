@@ -4,6 +4,7 @@ import dev.ledgerflow.common.BusinessRuleException;
 import dev.ledgerflow.common.ConflictException;
 import dev.ledgerflow.common.LedgerException;
 import dev.ledgerflow.common.NotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -43,6 +44,13 @@ public class ApiExceptionHandler {
                 .forEach(f -> fields.putIfAbsent(f.getField(), f.getDefaultMessage()));
         pd.setProperty("code", "validation_failed");
         pd.setProperty("fields", fields);
+        return pd;
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ProblemDetail constraintViolation(ConstraintViolationException e) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        pd.setProperty("code", "validation_failed");
         return pd;
     }
 
