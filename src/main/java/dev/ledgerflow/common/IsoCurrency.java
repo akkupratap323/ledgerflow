@@ -33,17 +33,18 @@ public @interface IsoCurrency {
             }
             return isValidCode(value);
         }
+
+        public static boolean isValidCode(String code) {
+            if (code.length() != 3) {
+                return false;
+            }
+            try {
+                Currency.getInstance(code.toUpperCase());
+                return true;
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }
     }
 
-    static boolean isValidCode(String code) {
-        if (code.length() != 3) {
-            return false;
-        }
-        try {
-            Currency.getInstance(code.toUpperCase());
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
-    }
 }
