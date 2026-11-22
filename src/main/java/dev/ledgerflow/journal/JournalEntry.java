@@ -38,6 +38,12 @@ public class JournalEntry implements Persistable<UUID> {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "idempotency_key", length = 100, updatable = false)
+    private String idempotencyKey;
+
+    @Column(name = "request_hash", length = 64, updatable = false)
+    private String requestHash;
+
     @OneToMany(mappedBy = "entry", cascade = CascadeType.PERSIST)
     @OrderBy("lineNo")
     private List<Posting> postings = new ArrayList<>();
@@ -69,6 +75,11 @@ public class JournalEntry implements Persistable<UUID> {
         this.isNew = false;
     }
 
+    void bindIdempotencyKey(String key, String hash) {
+        this.idempotencyKey = key;
+        this.requestHash = hash;
+    }
+
     void addPosting(Posting posting) {
         postings.add(posting);
     }
@@ -92,6 +103,14 @@ public class JournalEntry implements Persistable<UUID> {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public String getRequestHash() {
+        return requestHash;
     }
 
     public List<Posting> getPostings() {
