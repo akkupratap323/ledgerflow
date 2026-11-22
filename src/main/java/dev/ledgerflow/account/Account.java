@@ -37,6 +37,10 @@ public class Account {
     @Column(name = "balance_minor", nullable = false)
     private long balanceMinor;
 
+    /** Sum of pending holds. Held funds stay in the balance but cannot be spent. */
+    @Column(name = "held_minor", nullable = false)
+    private long heldMinor;
+
     @Column(name = "allow_negative", nullable = false)
     private boolean allowNegative;
 
@@ -73,13 +77,42 @@ public class Account {
             throw new BusinessRuleException("account_" + status.name().toLowerCase(),
                     "Account " + code + " is " + status.name().toLowerCase() + " and cannot take postings");
         }
-        long next = Math.addExact(balanceMinor, type.signedEffect(side, amountMinor));
-        if (next < 0 && !allowNegative) {
+        long effect = type.signedEffect(side, amountMinor);
+        long next = Math.addExact(balanceMinor, effect);
+        if (effect < 0 && !allowNegative && next - heldMinor < 0) {
             throw new BusinessRuleException("insufficient_funds",
                     "Account " + code + " has insufficient funds");
         }
         balanceMinor = next;
         return next;
+    }
+
+    /** Reserves funds for a hold. Fails if the available balance is too low. */
+    public void reserve(long amountMinor) {
+        if (status != AccountStatus.ACTIVE) {
+            throw new BusinessRuleException("account_" + status.name().toLowerCase(),
+                    "Account " + code + " is " + status.name().toLowerCase());
+        }
+        if (!allowNegative && availableMinor() < amountMinor) {
+            throw new BusinessRuleException("insufficient_funds",
+                    "Account " + code + " has insufficient available funds");
+        }
+        heldMinor = Math.addExact(heldMinor, amountMinor);
+    }
+
+    public void release(long amountMinor) {
+        if (amountMinor > heldMinor) {
+            throw new IllegalStateException("Releasing more than is held on " + code);
+        }
+        heldMinor -= amountMinor;
+    }
+
+    public long getHeldMinor() {
+        return heldMinor;
+    }
+
+    public long availableMinor() {
+        return balanceMinor - heldMinor;
     }
 
     public void freeze() {

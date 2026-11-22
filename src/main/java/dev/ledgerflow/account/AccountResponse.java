@@ -10,6 +10,8 @@ public record AccountResponse(
         AccountType type,
         String currency,
         long balanceMinor,
+        long heldMinor,
+        long availableMinor,
         String balance,
         AccountStatus status,
         boolean allowNegative,
@@ -18,7 +20,7 @@ public record AccountResponse(
     public static AccountResponse from(Account a) {
         return new AccountResponse(
                 a.getId(), a.getCode(), a.getName(), a.getType(), a.getCurrency(),
-                a.getBalanceMinor(), a.balance().format(), a.getStatus(),
+                a.getBalanceMinor(), a.getHeldMinor(), a.availableMinor(), a.balance().format(), a.getStatus(),
                 a.isAllowNegative(), a.getCreatedAt());
     }
 }
