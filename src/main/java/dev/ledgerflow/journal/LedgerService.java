@@ -87,8 +87,9 @@ public class LedgerService {
                         "Account " + account.getCode() + " is in " + account.getCurrency()
                                 + " but the entry is in " + currency);
             }
-            account.applyPosting(line.side(), line.amountMinor());
-            entry.addPosting(new Posting(entry, account, lineNo++, line.side(), line.amountMinor()));
+            long balanceAfter = account.applyPosting(line.side(), line.amountMinor());
+            entry.addPosting(new Posting(entry, account, lineNo++, line.side(), line.amountMinor(),
+                    account.getPostingCount(), balanceAfter));
         }
         return entries.saveAndFlush(entry);
     }

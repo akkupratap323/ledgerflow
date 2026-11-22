@@ -41,6 +41,12 @@ public class Posting {
     @Column(name = "amount_minor", nullable = false)
     private long amountMinor;
 
+    @Column(name = "account_seq", nullable = false)
+    private long accountSeq;
+
+    @Column(name = "balance_after_minor", nullable = false)
+    private long balanceAfterMinor;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -48,13 +54,16 @@ public class Posting {
         // for JPA
     }
 
-    Posting(JournalEntry entry, Account account, int lineNo, Side side, long amountMinor) {
+    Posting(JournalEntry entry, Account account, int lineNo, Side side, long amountMinor,
+            long accountSeq, long balanceAfterMinor) {
         this.id = UUID.randomUUID();
         this.entry = entry;
         this.account = account;
         this.lineNo = lineNo;
         this.side = side;
         this.amountMinor = amountMinor;
+        this.accountSeq = accountSeq;
+        this.balanceAfterMinor = balanceAfterMinor;
         this.createdAt = entry.getCreatedAt();
     }
 
@@ -80,6 +89,14 @@ public class Posting {
 
     public long getAmountMinor() {
         return amountMinor;
+    }
+
+    public long getAccountSeq() {
+        return accountSeq;
+    }
+
+    public long getBalanceAfterMinor() {
+        return balanceAfterMinor;
     }
 
     public Instant getCreatedAt() {

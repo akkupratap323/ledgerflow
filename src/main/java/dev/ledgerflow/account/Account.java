@@ -41,6 +41,9 @@ public class Account {
     @Column(name = "held_minor", nullable = false)
     private long heldMinor;
 
+    @Column(name = "posting_count", nullable = false)
+    private long postingCount;
+
     @Column(name = "allow_negative", nullable = false)
     private boolean allowNegative;
 
@@ -84,6 +87,7 @@ public class Account {
                     "Account " + code + " has insufficient funds");
         }
         balanceMinor = next;
+        postingCount++;
         return next;
     }
 
@@ -105,6 +109,10 @@ public class Account {
             throw new IllegalStateException("Releasing more than is held on " + code);
         }
         heldMinor -= amountMinor;
+    }
+
+    public long getPostingCount() {
+        return postingCount;
     }
 
     public long getHeldMinor() {
