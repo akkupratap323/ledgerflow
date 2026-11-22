@@ -1,0 +1,80 @@
+package dev.ledgerflow.journal;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+import jakarta.persistence.Table;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+/** An immutable, balanced set of postings. Entries are never updated or deleted, only reversed. */
+@Entity
+@Table(name = "journal_entries")
+public class JournalEntry {
+
+    @Id
+    private UUID id;
+
+    @Column(length = 100)
+    private String reference;
+
+    @Column(length = 500)
+    private String description;
+
+    @Column(nullable = false, length = 3)
+    private String currency;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @OneToMany(mappedBy = "entry", cascade = CascadeType.PERSIST)
+    @OrderBy("lineNo")
+    private List<Posting> postings = new ArrayList<>();
+
+    protected JournalEntry() {
+        // for JPA
+    }
+
+    public JournalEntry(String reference, String description, String currency) {
+        this.id = UUID.randomUUID();
+        this.reference = reference;
+        this.description = description;
+        this.currency = currency.toUpperCase();
+        this.createdAt = Instant.now();
+    }
+
+    void addPosting(Posting posting) {
+        postings.add(posting);
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getReference() {
+        return reference;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public List<Posting> getPostings() {
+        return Collections.unmodifiableList(postings);
+    }
+}
