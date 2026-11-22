@@ -6,6 +6,7 @@ import dev.ledgerflow.common.BusinessRuleException;
 import dev.ledgerflow.common.ConflictException;
 import dev.ledgerflow.common.NotFoundException;
 import dev.ledgerflow.outbox.OutboxWriter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +24,14 @@ public class LedgerService {
     private final AccountRepository accounts;
     private final JournalEntryRepository entries;
     private final OutboxWriter outbox;
+    private final MeterRegistry metrics;
 
-    public LedgerService(AccountRepository accounts, JournalEntryRepository entries, OutboxWriter outbox) {
+    public LedgerService(AccountRepository accounts, JournalEntryRepository entries, OutboxWriter outbox,
+                         MeterRegistry metrics) {
         this.accounts = accounts;
         this.entries = entries;
         this.outbox = outbox;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -97,6 +101,7 @@ public class LedgerService {
         JournalEntry saved = entries.saveAndFlush(entry);
         String eventType = saved.getReversalOf() == null ? "entry.posted" : "entry.reversed";
         outbox.record("journal_entry", saved.getId(), eventType, JournalEntryResponse.from(saved));
+        metrics.counter("ledger.entries", "type", eventType, "currency", saved.getCurrency()).increment();
         return saved;
     }
 
