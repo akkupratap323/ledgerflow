@@ -6,7 +6,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,7 +21,7 @@ import java.util.UUID;
 /** An immutable, balanced set of postings. Entries are never updated or deleted, only reversed. */
 @Entity
 @Table(name = "journal_entries")
-public class JournalEntry {
+public class JournalEntry implements Persistable<UUID> {
 
     @Id
     private UUID id;
@@ -38,6 +42,10 @@ public class JournalEntry {
     @OrderBy("lineNo")
     private List<Posting> postings = new ArrayList<>();
 
+    /** Ids are assigned in Java, so tell Spring Data to persist instead of merge. */
+    @Transient
+    private boolean isNew = true;
+
     protected JournalEntry() {
         // for JPA
     }
@@ -50,10 +58,22 @@ public class JournalEntry {
         this.createdAt = Instant.now();
     }
 
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNew = false;
+    }
+
     void addPosting(Posting posting) {
         postings.add(posting);
     }
 
+    @Override
     public UUID getId() {
         return id;
     }
