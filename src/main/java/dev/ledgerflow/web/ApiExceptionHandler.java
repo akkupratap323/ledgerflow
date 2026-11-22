@@ -5,6 +5,7 @@ import dev.ledgerflow.common.ConflictException;
 import dev.ledgerflow.common.LedgerException;
 import dev.ledgerflow.common.NotFoundException;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -58,6 +59,15 @@ public class ApiExceptionHandler {
     ProblemDetail unreadable(Exception e) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Malformed request");
         pd.setProperty("code", "malformed_request");
+        return pd;
+    }
+
+    /** A unique constraint lost a race, e.g. two reversals of the same entry at the same time. */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ProblemDetail integrity(DataIntegrityViolationException e) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "The request conflicts with the current state of the ledger");
+        pd.setProperty("code", "conflict");
         return pd;
     }
 
