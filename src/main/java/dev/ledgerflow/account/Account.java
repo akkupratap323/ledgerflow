@@ -69,6 +69,10 @@ public class Account {
      * Throws when the account may not go negative and the posting would overdraw it.
      */
     public long applyPosting(Side side, long amountMinor) {
+        if (status != AccountStatus.ACTIVE) {
+            throw new BusinessRuleException("account_" + status.name().toLowerCase(),
+                    "Account " + code + " is " + status.name().toLowerCase() + " and cannot take postings");
+        }
         long next = Math.addExact(balanceMinor, type.signedEffect(side, amountMinor));
         if (next < 0 && !allowNegative) {
             throw new BusinessRuleException("insufficient_funds",
