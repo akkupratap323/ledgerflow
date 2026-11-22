@@ -46,13 +46,41 @@ public class LedgerService {
                 return new PostResult(checkReplay(existing.get(), hash), true);
             }
         }
-        String currency = command.currency().toUpperCase();
+        JournalEntry entry = new JournalEntry(command.reference(), command.description(), command.currency());
+        if (idempotencyKey != null) {
+            entry.bindIdempotencyKey(idempotencyKey, hash);
+        }
+        return new PostResult(write(entry, command.lines()), false);
+    }
 
-        Map<String, Account> locked = lockAccounts(command.lines());
+    /**
+     * Reverses an entry by posting its mirror image. The original stays untouched, so the
+     * history keeps both the mistake and the correction.
+     */
+    @Transactional
+    public JournalEntry reverse(UUID entryId, String reason) {
+        JournalEntry original = entries.findById(entryId)
+                .orElseThrow(() -> new NotFoundException("Journal entry", entryId));
+        if (original.getReversalOf() != null) {
+            throw new BusinessRuleException("cannot_reverse_reversal", "A reversal entry cannot itself be reversed");
+        }
+        if (entries.existsByReversalOf(entryId)) {
+            throw new ConflictException("already_reversed", "Entry " + entryId + " was already reversed");
+        }
+        List<PostingLine> mirrored = original.getPostings().stream()
+                .map(p -> new PostingLine(p.getAccount().getCode(), p.getSide().opposite(), p.getAmountMinor()))
+                .toList();
+        String description = "Reversal of " + entryId + (reason == null ? "" : ": " + reason);
+        JournalEntry reversal = new JournalEntry(original.getReference(), description, original.getCurrency());
+        reversal.markAsReversalOf(entryId);
+        return write(reversal, mirrored);
+    }
 
-        JournalEntry entry = new JournalEntry(command.reference(), command.description(), currency);
+    private JournalEntry write(JournalEntry entry, List<PostingLine> lines) {
+        String currency = entry.getCurrency();
+        Map<String, Account> locked = lockAccounts(lines);
         int lineNo = 1;
-        for (PostingLine line : command.lines()) {
+        for (PostingLine line : lines) {
             Account account = locked.get(line.accountCode());
             if (!account.getCurrency().equals(currency)) {
                 throw new BusinessRuleException("currency_mismatch",
@@ -62,11 +90,7 @@ public class LedgerService {
             account.applyPosting(line.side(), line.amountMinor());
             entry.addPosting(new Posting(entry, account, lineNo++, line.side(), line.amountMinor()));
         }
-        if (idempotencyKey != null) {
-            entry.bindIdempotencyKey(idempotencyKey, hash);
-        }
-        JournalEntry saved = entries.saveAndFlush(entry);
-        return new PostResult(saved, false);
+        return entries.saveAndFlush(entry);
     }
 
     /** Used after losing an insert race on the idempotency key. */

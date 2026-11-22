@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -39,6 +40,14 @@ public class JournalController {
         return ResponseEntity.status(result.replayed() ? HttpStatus.OK : HttpStatus.CREATED)
                 .header(REPLAYED, String.valueOf(result.replayed()))
                 .body(JournalEntryResponse.from(result.entry()));
+    }
+
+    @PostMapping("/{id}/reversal")
+    @ResponseStatus(HttpStatus.CREATED)
+    public JournalEntryResponse reverse(@PathVariable UUID id,
+                                        @Valid @RequestBody(required = false) ReverseEntryRequest request) {
+        String reason = request == null ? null : request.reason();
+        return JournalEntryResponse.from(ledger.reverse(id, reason));
     }
 
     @GetMapping("/{id}")
