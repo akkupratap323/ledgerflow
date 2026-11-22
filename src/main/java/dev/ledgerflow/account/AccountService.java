@@ -35,6 +35,31 @@ public class AccountService {
         return accounts.findByCode(code).orElseThrow(() -> new NotFoundException("Account", code));
     }
 
+    @Transactional
+    public Account freeze(UUID id) {
+        Account account = lock(id);
+        account.freeze();
+        return account;
+    }
+
+    @Transactional
+    public Account unfreeze(UUID id) {
+        Account account = lock(id);
+        account.unfreeze();
+        return account;
+    }
+
+    @Transactional
+    public Account close(UUID id) {
+        Account account = lock(id);
+        account.close();
+        return account;
+    }
+
+    private Account lock(UUID id) {
+        return accounts.findByIdForUpdate(id).orElseThrow(() -> new NotFoundException("Account", id));
+    }
+
     @Transactional(readOnly = true)
     public List<Account> list() {
         return accounts.findAll();

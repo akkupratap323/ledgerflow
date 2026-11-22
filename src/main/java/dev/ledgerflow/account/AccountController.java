@@ -41,6 +41,21 @@ public class AccountController {
         return AccountResponse.from(service.getByCode(code));
     }
 
+    @PostMapping("/{id}/freeze")
+    public AccountResponse freeze(@PathVariable UUID id) {
+        return AccountResponse.from(service.freeze(id));
+    }
+
+    @PostMapping("/{id}/unfreeze")
+    public AccountResponse unfreeze(@PathVariable UUID id) {
+        return AccountResponse.from(service.unfreeze(id));
+    }
+
+    @PostMapping("/{id}/close")
+    public AccountResponse close(@PathVariable UUID id) {
+        return AccountResponse.from(service.close(id));
+    }
+
     @GetMapping
     public List<AccountResponse> list() {
         return service.list().stream().map(AccountResponse::from).toList();
