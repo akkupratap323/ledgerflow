@@ -5,6 +5,7 @@ import dev.ledgerflow.account.AccountRepository;
 import dev.ledgerflow.common.BusinessRuleException;
 import dev.ledgerflow.common.ConflictException;
 import dev.ledgerflow.common.NotFoundException;
+import dev.ledgerflow.outbox.OutboxWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,10 +22,12 @@ public class LedgerService {
 
     private final AccountRepository accounts;
     private final JournalEntryRepository entries;
+    private final OutboxWriter outbox;
 
-    public LedgerService(AccountRepository accounts, JournalEntryRepository entries) {
+    public LedgerService(AccountRepository accounts, JournalEntryRepository entries, OutboxWriter outbox) {
         this.accounts = accounts;
         this.entries = entries;
+        this.outbox = outbox;
     }
 
     @Transactional
@@ -91,7 +94,10 @@ public class LedgerService {
             entry.addPosting(new Posting(entry, account, lineNo++, line.side(), line.amountMinor(),
                     account.getPostingCount(), balanceAfter));
         }
-        return entries.saveAndFlush(entry);
+        JournalEntry saved = entries.saveAndFlush(entry);
+        String eventType = saved.getReversalOf() == null ? "entry.posted" : "entry.reversed";
+        outbox.record("journal_entry", saved.getId(), eventType, JournalEntryResponse.from(saved));
+        return saved;
     }
 
     /** Used after losing an insert race on the idempotency key. */
