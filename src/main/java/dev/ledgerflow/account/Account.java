@@ -40,6 +40,10 @@ public class Account {
     @Column(name = "allow_negative", nullable = false)
     private boolean allowNegative;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private AccountStatus status = AccountStatus.ACTIVE;
+
     @Version
     private long version;
 
@@ -72,6 +76,35 @@ public class Account {
         }
         balanceMinor = next;
         return next;
+    }
+
+    public void freeze() {
+        requireNotClosed();
+        status = AccountStatus.FROZEN;
+    }
+
+    public void unfreeze() {
+        requireNotClosed();
+        status = AccountStatus.ACTIVE;
+    }
+
+    public void close() {
+        requireNotClosed();
+        if (balanceMinor != 0) {
+            throw new BusinessRuleException("balance_not_zero",
+                    "Account " + code + " can only be closed at zero balance");
+        }
+        status = AccountStatus.CLOSED;
+    }
+
+    private void requireNotClosed() {
+        if (status == AccountStatus.CLOSED) {
+            throw new BusinessRuleException("account_closed", "Account " + code + " is closed");
+        }
+    }
+
+    public AccountStatus getStatus() {
+        return status;
     }
 
     public UUID getId() {

@@ -1,0 +1,2 @@
+ALTER TABLE accounts ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE';
+ALTER TABLE accounts ADD CONSTRAINT ck_accounts_status CHECK (status IN ('ACTIVE', 'FROZEN', 'CLOSED'));
