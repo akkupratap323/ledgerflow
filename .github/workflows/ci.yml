@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run tests
+        run: ./gradlew test --no-daemon
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
+  postgres-smoke:
+    # Boots the real jar against PostgreSQL so migrations and schema validation run on the production database.
+    runs-on: ubuntu-latest
+    needs: test
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ledgerflow
+          POSTGRES_USER: ledgerflow
+          POSTGRES_PASSWORD: ledgerflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ledgerflow"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build jar
+        run: ./gradlew bootJar --no-daemon
+      - name: Start app on PostgreSQL
+        run: |
+          SPRING_PROFILES_ACTIVE=postgres java -jar build/libs/*.jar > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/actuator/health && break
+            sleep 2
+          done
+      - name: Exercise the API
+        run: |
+          set -e
+          B=http://localhost:8080/api/v1
+          H='Content-Type: application/json'
+          curl -sf -H "$H" -X POST $B/accounts -d '{"code":"cash:bank","name":"Bank","type":"ASSET","currency":"INR","allowNegative":true}'
+          curl -sf -H "$H" -X POST $B/accounts -d '{"code":"wallet:a","name":"A","type":"LIABILITY","currency":"INR"}'
+          curl -sf -H "$H" -H "Idempotency-Key: ci-1" -X POST $B/entries -d '{"currency":"INR","postings":[{"account":"cash:bank","side":"DEBIT","amountMinor":5000},{"account":"wallet:a","side":"CREDIT","amountMinor":5000}]}'
+          curl -sf -H "$H" -X POST $B/holds -d '{"account":"wallet:a","amountMinor":1000,"ttlSeconds":60}'
+          curl -sf $B/reports/trial-balance | grep '"balanced":true'
+          curl -sf $B/reports/reconciliation | grep '"mismatches":\[\]'
+      - name: Show app log
+        if: always()
+        run: tail -n 200 app.log

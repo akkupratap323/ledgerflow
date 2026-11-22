@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ledgerflow}
+    username: ${DATABASE_USERNAME:ledgerflow}
+    password: ${DATABASE_PASSWORD:ledgerflow}
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_SIZE:10}
+
+ledgerflow:
+  security:
+    api-keys: ${LEDGERFLOW_API_KEYS:}
+  outbox:
+    webhook-url: ${LEDGERFLOW_WEBHOOK_URL:}
+    webhook-secret: ${LEDGERFLOW_WEBHOOK_SECRET:}
