@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface JournalEntryRepository extends JpaRepository<JournalEntry, UUID> {
 
     Optional<JournalEntry> findByIdempotencyKey(String idempotencyKey);
+
+    boolean existsByReversalOf(UUID originalId);
 }

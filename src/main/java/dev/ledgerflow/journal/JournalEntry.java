@@ -44,6 +44,10 @@ public class JournalEntry implements Persistable<UUID> {
     @Column(name = "request_hash", length = 64, updatable = false)
     private String requestHash;
 
+    /** Set when this entry reverses another one. */
+    @Column(name = "reversal_of", updatable = false)
+    private UUID reversalOf;
+
     @OneToMany(mappedBy = "entry", cascade = CascadeType.PERSIST)
     @OrderBy("lineNo")
     private List<Posting> postings = new ArrayList<>();
@@ -73,6 +77,10 @@ public class JournalEntry implements Persistable<UUID> {
     @PostPersist
     void markNotNew() {
         this.isNew = false;
+    }
+
+    void markAsReversalOf(UUID originalId) {
+        this.reversalOf = originalId;
     }
 
     void bindIdempotencyKey(String key, String hash) {
@@ -111,6 +119,10 @@ public class JournalEntry implements Persistable<UUID> {
 
     public String getRequestHash() {
         return requestHash;
+    }
+
+    public UUID getReversalOf() {
+        return reversalOf;
     }
 
     public List<Posting> getPostings() {

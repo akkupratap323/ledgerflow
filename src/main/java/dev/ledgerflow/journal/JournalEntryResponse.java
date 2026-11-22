@@ -12,6 +12,7 @@ public record JournalEntryResponse(
         String description,
         String currency,
         Instant createdAt,
+        UUID reversalOf,
         List<Line> postings
 ) {
     public record Line(int lineNo, String account, Side side, long amountMinor) {
@@ -19,7 +20,7 @@ public record JournalEntryResponse(
 
     public static JournalEntryResponse from(JournalEntry e) {
         return new JournalEntryResponse(e.getId(), e.getReference(), e.getDescription(), e.getCurrency(),
-                e.getCreatedAt(),
+                e.getCreatedAt(), e.getReversalOf(),
                 e.getPostings().stream()
                         .map(p -> new Line(p.getLineNo(), p.getAccount().getCode(), p.getSide(), p.getAmountMinor()))
                         .toList());
