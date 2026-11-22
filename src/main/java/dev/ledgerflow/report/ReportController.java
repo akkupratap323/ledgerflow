@@ -16,10 +16,18 @@ public class ReportController {
 
     private final StatementService statements;
     private final TrialBalanceService trialBalance;
+    private final ReconciliationService reconciliation;
 
-    public ReportController(StatementService statements, TrialBalanceService trialBalance) {
+    public ReportController(StatementService statements, TrialBalanceService trialBalance,
+                            ReconciliationService reconciliation) {
         this.statements = statements;
         this.trialBalance = trialBalance;
+        this.reconciliation = reconciliation;
+    }
+
+    @GetMapping("/reports/reconciliation")
+    public ReconciliationService.Report reconciliation() {
+        return reconciliation.reconcile();
     }
 
     @GetMapping("/reports/trial-balance")
