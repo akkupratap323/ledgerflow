@@ -58,6 +58,7 @@ public class HoldService {
     @Transactional
     public Hold capture(UUID holdId, long amountMinor, String destinationCode) {
         Hold hold = holds.findByIdForUpdate(holdId).orElseThrow(() -> new NotFoundException("Hold", holdId));
+        hold.requirePending();
         if (hold.getStatus() == HoldStatus.PENDING && hold.getExpiresAt().isBefore(Instant.now())) {
             throw new BusinessRuleException("hold_expired", "Hold " + holdId + " has expired");
         }
@@ -95,6 +96,7 @@ public class HoldService {
 
     private Hold release(UUID holdId, HoldStatus outcome) {
         Hold hold = holds.findByIdForUpdate(holdId).orElseThrow(() -> new NotFoundException("Hold", holdId));
+        hold.requirePending();
         Account account = accounts.findByIdForUpdate(hold.getAccountId()).orElseThrow();
         hold.resolve(outcome, null);
         account.release(hold.getAmountMinor());

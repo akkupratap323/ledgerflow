@@ -66,11 +66,15 @@ public class Hold {
         this.status = HoldStatus.PENDING;
     }
 
-    void resolve(HoldStatus outcome, UUID entryId) {
+    void requirePending() {
         if (status.isFinal()) {
             throw new BusinessRuleException("hold_" + status.name().toLowerCase(),
                     "Hold " + id + " is already " + status.name().toLowerCase());
         }
+    }
+
+    void resolve(HoldStatus outcome, UUID entryId) {
+        requirePending();
         this.status = outcome;
         this.captureEntryId = entryId;
         this.resolvedAt = Instant.now();
