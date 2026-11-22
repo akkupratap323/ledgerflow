@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -14,9 +15,16 @@ import java.util.UUID;
 public class ReportController {
 
     private final StatementService statements;
+    private final TrialBalanceService trialBalance;
 
-    public ReportController(StatementService statements) {
+    public ReportController(StatementService statements, TrialBalanceService trialBalance) {
         this.statements = statements;
+        this.trialBalance = trialBalance;
+    }
+
+    @GetMapping("/reports/trial-balance")
+    public List<TrialBalance> trialBalance() {
+        return trialBalance.trialBalance();
     }
 
     @GetMapping("/accounts/{id}/statement")
