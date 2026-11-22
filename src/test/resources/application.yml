@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:ledgerflow-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+ledgerflow:
+  scheduling:
+    enabled: false
