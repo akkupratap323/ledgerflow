@@ -3,6 +3,7 @@ package dev.ledgerflow.journal;
 import dev.ledgerflow.account.Account;
 import dev.ledgerflow.account.AccountRepository;
 import dev.ledgerflow.common.BusinessRuleException;
+import dev.ledgerflow.common.ConflictException;
 import dev.ledgerflow.common.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,23 @@ public class LedgerService {
 
     @Transactional
     public JournalEntry post(PostEntryCommand command) {
+        return post(command, null).entry();
+    }
+
+    /**
+     * Posts an entry. With an idempotency key, a retry of the same request returns the original
+     * entry and a different request with the same key is rejected.
+     */
+    @Transactional
+    public PostResult post(PostEntryCommand command, String idempotencyKey) {
         EntryValidator.validate(command.lines());
+        String hash = RequestHasher.hash(command);
+        if (idempotencyKey != null) {
+            var existing = entries.findByIdempotencyKey(idempotencyKey);
+            if (existing.isPresent()) {
+                return new PostResult(checkReplay(existing.get(), hash), true);
+            }
+        }
         String currency = command.currency().toUpperCase();
 
         Map<String, Account> locked = lockAccounts(command.lines());
@@ -45,7 +62,30 @@ public class LedgerService {
             account.applyPosting(line.side(), line.amountMinor());
             entry.addPosting(new Posting(entry, account, lineNo++, line.side(), line.amountMinor()));
         }
-        return entries.save(entry);
+        if (idempotencyKey != null) {
+            entry.bindIdempotencyKey(idempotencyKey, hash);
+        }
+        JournalEntry saved = entries.saveAndFlush(entry);
+        return new PostResult(saved, false);
+    }
+
+    /** Used after losing an insert race on the idempotency key. */
+    @Transactional(readOnly = true)
+    public PostResult replay(PostEntryCommand command, String idempotencyKey) {
+        JournalEntry existing = entries.findByIdempotencyKey(idempotencyKey)
+                .orElseThrow(() -> new NotFoundException("Journal entry with idempotency key", idempotencyKey));
+        checkReplay(existing, RequestHasher.hash(command));
+        existing.getPostings().forEach(p -> p.getAccount().getCode());
+        return new PostResult(existing, true);
+    }
+
+    private static JournalEntry checkReplay(JournalEntry existing, String hash) {
+        if (!existing.getRequestHash().equals(hash)) {
+            throw new ConflictException("idempotency_key_reused",
+                    "Idempotency key was already used for a different request");
+        }
+        existing.getPostings().forEach(p -> p.getAccount().getCode());
+        return existing;
     }
 
     @Transactional(readOnly = true)
