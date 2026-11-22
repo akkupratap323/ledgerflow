@@ -1,6 +1,8 @@
 package dev.ledgerflow.account;
 
+import dev.ledgerflow.common.BusinessRuleException;
 import dev.ledgerflow.common.Money;
+import dev.ledgerflow.common.Side;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -56,6 +58,20 @@ public class Account {
         this.currency = currency.toUpperCase();
         this.allowNegative = allowNegative;
         this.createdAt = Instant.now();
+    }
+
+    /**
+     * Applies a posting to the cached balance. Returns the new balance.
+     * Throws when the account may not go negative and the posting would overdraw it.
+     */
+    public long applyPosting(Side side, long amountMinor) {
+        long next = Math.addExact(balanceMinor, type.signedEffect(side, amountMinor));
+        if (next < 0 && !allowNegative) {
+            throw new BusinessRuleException("insufficient_funds",
+                    "Account " + code + " has insufficient funds");
+        }
+        balanceMinor = next;
+        return next;
     }
 
     public UUID getId() {
